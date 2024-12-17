@@ -30,7 +30,7 @@
 
     <script>
         let scene, camera, renderer, model, controls;
-        const hotspots = [];
+        let redCube = null;
 
         function init() {
             // Create scene
@@ -61,10 +61,6 @@
                     model = gltf.scene;
                     scene.add(model);
                     
-                    // Add hotspots after model is loaded
-                    addHotspot(-0.7256761350110058, 1.1868843733668957, 0.997205040684192, 'https://mednetheatlh.com');
-                    addHotspot(0.08208967382268295, 1.269859131422908, -1.5593702826554243, null, playAnimation);
-                    
                     // Hide loading message
                     document.getElementById('loading').style.display = 'none';
                 },
@@ -87,15 +83,6 @@
             animate();
         }
 
-        function addHotspot(x, y, z, url, callback) {
-            const geometry = new THREE.SphereGeometry(0.05, 32, 32);
-            const material = new THREE.MeshBasicMaterial({color: 0xff0000});
-            const hotspot = new THREE.Mesh(geometry, material);
-            hotspot.position.set(x, y, z);
-            scene.add(hotspot);
-            hotspots.push({mesh: hotspot, url: url, callback: callback});
-        }
-
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
@@ -110,22 +97,28 @@
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
             
-            const intersects = raycaster.intersectObjects(hotspots.map(h => h.mesh));
+            const intersects = raycaster.intersectObject(model, true);
             
             if (intersects.length > 0) {
-                const clickedHotspot = hotspots.find(h => h.mesh === intersects[0].object);
-                if (clickedHotspot.url) {
-                    window.open(clickedHotspot.url, '_blank');
-                } else if (clickedHotspot.callback) {
-                    clickedHotspot.callback();
-                }
+                createRedCube(intersects[0].point);
             }
         }
 
-        function playAnimation() {
-            // Implement your animation logic here
-            console.log('Playing animation');
-            alert('Animation hotspot clicked!');
+        function createRedCube(position) {
+            // Remove existing red cube if there is one
+            if (redCube) {
+                scene.remove(redCube);
+            }
+
+            // Create a new red cube
+            const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const material = new THREE.MeshBasicMaterial({color: 0xff0000});
+            redCube = new THREE.Mesh(geometry, material);
+            
+            // Position the cube slightly above the clicked point
+            redCube.position.set(position.x, position.y + 0.1, position.z);
+            
+            scene.add(redCube);
         }
 
         function onWindowResize() {
