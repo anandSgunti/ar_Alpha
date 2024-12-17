@@ -1,113 +1,142 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>Interactive 3D Model</title>
-    <meta charset="utf-8">
-    <meta name="description" content="<model-viewer> template">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link type="text/css" href="./styles.css" rel="stylesheet"/>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Model with Three.js</title>
     <style>
-      /* Your existing styles here */
-    </style>
-  </head>
-  <body>
-    <!-- <model-viewer> HTML element -->
-    <model-viewer
-      id="modelViewer"
-      src="ImageToStl.com_logo_dark.glb"
-      ar
-      ar-modes="webxr scene-viewer quick-look"
-      camera-controls
-      tone-mapping="aces"
-      poster="poster.webp"
-      shadow-intensity="1"
-      environment-image="pillars_1k.hdr"
-      camera-orbit="71.26deg 72.93deg 6.504m"
-      field-of-view="30deg"
-    >
-      <!-- Clickable Hotspot 1 -->
-      <button
-        class="Hotspot"
-        slot="hotspot-1"
-        data-position="-0.7256761350110058m 1.1868843733668957m 0.997205040684192m"
-        data-url="https://mednetheatlh.com"
-      ></button>
-
-      <!-- Clickable Hotspot 2 -->
-      <button
-        class="Hotspot"
-        slot="hotspot-2"
-        data-position="0.08208967382268295m 1.269859131422908m -1.5593702826554243m"
-        data-animation="true"
-      ></button>
-
-      <!-- Loading progress bar -->
-      <div class="progress-bar" slot="progress-bar">
-        <div class="update-bar" id="update-bar"></div>
-      </div>
-
-      <!-- AR Button -->
-      <button slot="ar-button" id="ar-button">
-        View in your space
-      </button>
-
-      <!-- AR Prompt -->
-      <div id="ar-prompt">
-        <img src="ar_hand_prompt.png" alt="AR Prompt" />
-      </div>
-    </model-viewer>
-
-    <!-- JavaScript -->
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const modelViewer = document.getElementById('modelViewer');
-        const progressBar = document.querySelector('.progress-bar');
-        const updateBar = document.getElementById('update-bar');
-
-        // Progress bar logic
-        const onProgress = (event) => {
-          const progress = event.detail.totalProgress;
-          updateBar.style.width = `${progress * 100}%`;
-          if (progress === 1) {
-            progressBar.classList.add('hide');
-          } else {
-            progressBar.classList.remove('hide');
-          }
-        };
-
-        modelViewer.addEventListener('progress', onProgress);
-
-        // Hotspot interaction
-        modelViewer.addEventListener('load', () => {
-          const hotspots = modelViewer.querySelectorAll('.Hotspot');
-          
-          hotspots.forEach(hotspot => {
-            hotspot.addEventListener('click', () => {
-              const url = hotspot.getAttribute('data-url');
-              const animation = hotspot.getAttribute('data-animation');
-              
-              if (url) {
-                window.open(url, '_blank');
-              } else if (animation === 'true') {
-                playAnimation();
-              }
-            });
-          });
-        });
-
-        // Function to play animation
-        function playAnimation() {
-          if (modelViewer.availableAnimations && modelViewer.availableAnimations.length > 0) {
-            modelViewer.animationName = modelViewer.availableAnimations[0];
-            modelViewer.play();
-          } else {
-            alert("No animation available in this model.");
-          }
+        body { margin: 0; }
+        #scene-container {
+            width: 100%;
+            height: 100vh;
         }
-      });
-    </script>
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: Arial, sans-serif;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="scene-container"></div>
+    <div id="loading">Loading 3D Model...</div>
 
-    <!-- Loads <model-viewer> for browsers -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-  </body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        let scene, camera, renderer, model, controls;
+        const hotspots = [];
+
+        function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xf0f0f0);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('scene-container').appendChild(renderer.domElement);
+            
+            // Add OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.25;
+            controls.screenSpacePanning = false;
+            controls.maxPolarAngle = Math.PI / 2;
+
+            // Load model
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                'ImageToStl.com_logo_dark.glb', 
+                function(gltf) {
+                    model = gltf.scene;
+                    scene.add(model);
+                    
+                    // Add hotspots after model is loaded
+                    addHotspot(-0.7256761350110058, 1.1868843733668957, 0.997205040684192, 'https://mednetheatlh.com');
+                    addHotspot(0.08208967382268295, 1.269859131422908, -1.5593702826554243, null, playAnimation);
+                    
+                    // Hide loading message
+                    document.getElementById('loading').style.display = 'none';
+                },
+                function(xhr) {
+                    console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                function(error) {
+                    console.error('An error happened', error);
+                }
+            );
+            
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            
+            const pointLight = new THREE.PointLight(0xffffff, 1);
+            pointLight.position.set(5, 5, 5);
+            scene.add(pointLight);
+            
+            animate();
+        }
+
+        function addHotspot(x, y, z, url, callback) {
+            const geometry = new THREE.SphereGeometry(0.05, 32, 32);
+            const material = new THREE.MeshBasicMaterial({color: 0xff0000});
+            const hotspot = new THREE.Mesh(geometry, material);
+            hotspot.position.set(x, y, z);
+            scene.add(hotspot);
+            hotspots.push({mesh: hotspot, url: url, callback: callback});
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onMouseClick(event) {
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(hotspots.map(h => h.mesh));
+            
+            if (intersects.length > 0) {
+                const clickedHotspot = hotspots.find(h => h.mesh === intersects[0].object);
+                if (clickedHotspot.url) {
+                    window.open(clickedHotspot.url, '_blank');
+                } else if (clickedHotspot.callback) {
+                    clickedHotspot.callback();
+                }
+            }
+        }
+
+        function playAnimation() {
+            // Implement your animation logic here
+            console.log('Playing animation');
+            alert('Animation hotspot clicked!');
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.addEventListener('click', onMouseClick);
+        window.addEventListener('resize', onWindowResize);
+        init();
+    </script>
+</body>
 </html>
