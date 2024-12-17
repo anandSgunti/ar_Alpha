@@ -7,50 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link type="text/css" href="./styles.css" rel="stylesheet"/>
     <style>
-      /* Simple styling for hotspots */
-      .Hotspot {
-        background-color: #fff;
-        border: 2px solid #000;
-        border-radius: 50%;
-        width: 24px;
-        height: 24px;
-        cursor: pointer;
-      }
-      .Hotspot:hover {
-        background-color: #f0f0f0;
-      }
-      /* Progress bar styling */
-      .progress-bar {
-        position: absolute;
-        bottom: 10px;
-        left: 50%;
-        transform: translateX(-50%);
-        height: 5px;
-        width: 50%;
-        background-color: #ddd;
-      }
-      .update-bar {
-        height: 100%;
-        width: 0;
-        background-color: #4CAF50;
-      }
-      #ar-button {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        cursor: pointer;
-        font-size: 16px;
-        border-radius: 8px;
-      }
-      #ar-prompt img {
-        width: 50px;
-        height: 50px;
-      }
+      /* Your existing styles here */
     </style>
   </head>
   <body>
@@ -81,7 +38,7 @@
         class="Hotspot"
         slot="hotspot-2"
         data-position="0.08208967382268295m 1.269859131422908m -1.5593702826554243m"
-        onclick="playAnimation()"
+        data-animation="true"
       ></button>
 
       <!-- Loading progress bar -->
@@ -102,51 +59,55 @@
 
     <!-- JavaScript -->
     <script>
-      const modelViewer = document.getElementById("modelViewer");
+      document.addEventListener('DOMContentLoaded', function() {
+        const modelViewer = document.getElementById('modelViewer');
+        const progressBar = document.querySelector('.progress-bar');
+        const updateBar = document.getElementById('update-bar');
 
-      // Progress bar logic
-      const progressBar = document.querySelector(".progress-bar");
-      const updateBar = document.getElementById("update-bar");
+        // Progress bar logic
+        const onProgress = (event) => {
+          const progress = event.detail.totalProgress;
+          updateBar.style.width = `${progress * 100}%`;
+          if (progress === 1) {
+            progressBar.classList.add('hide');
+          } else {
+            progressBar.classList.remove('hide');
+          }
+        };
 
-      modelViewer.addEventListener("progress", (event) => {
-        const progress = event.detail.totalProgress;
-        updateBar.style.width = `${progress * 100}%`;
-        if (progress === 1) {
-          progressBar.classList.add("hide");
+        modelViewer.addEventListener('progress', onProgress);
+
+        // Hotspot interaction
+        modelViewer.addEventListener('load', () => {
+          const hotspots = modelViewer.querySelectorAll('.Hotspot');
+          
+          hotspots.forEach(hotspot => {
+            hotspot.addEventListener('click', () => {
+              const url = hotspot.getAttribute('data-url');
+              const animation = hotspot.getAttribute('data-animation');
+              
+              if (url) {
+                window.open(url, '_blank');
+              } else if (animation === 'true') {
+                playAnimation();
+              }
+            });
+          });
+        });
+
+        // Function to play animation
+        function playAnimation() {
+          if (modelViewer.availableAnimations && modelViewer.availableAnimations.length > 0) {
+            modelViewer.animationName = modelViewer.availableAnimations[0];
+            modelViewer.play();
+          } else {
+            alert("No animation available in this model.");
+          }
         }
       });
-
-     document.addEventListener('DOMContentLoaded', function() {
-  const modelViewer = document.querySelector('model-viewer');
-  
-  modelViewer.addEventListener('load', () => {
-    const hotspots = modelViewer.querySelectorAll('.Hotspot');
-    
-    hotspots.forEach(hotspot => {
-      hotspot.addEventListener('click', () => {
-        const url = hotspot.getAttribute('data-url');
-        if (url) {
-          window.open(url, '_blank');
-        }
-      });
-    });
-  });
-});
-
-      // Function to play animation (example assumes model has animations)
-      function playAnimation() {
-        if (modelViewer.availableAnimations && modelViewer.availableAnimations.length > 0) {
-          modelViewer.animationName = modelViewer.availableAnimations[0];
-          modelViewer.play();
-        } else {
-          alert("No animation available in this model.");
-        }
-      }
     </script>
 
     <!-- Loads <model-viewer> for browsers -->
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
   </body>
 </html>
-  
-
